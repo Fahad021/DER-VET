@@ -112,4 +112,12 @@ class MicrogridServiceAggregator(ServiceAggregator):
         Returns: true if a max constraint for an active market participation service is not defined
 
         """
-        return bool(sum([1 if not vs.max_participation_is_defined() and name in {'LF', 'SR', 'NSR', 'FR'} else 0 for name, vs in self.value_streams.items()]))
+        return bool(
+            sum(
+                1
+                if not vs.max_participation_is_defined()
+                and name in {'LF', 'SR', 'NSR', 'FR'}
+                else 0
+                for name, vs in self.value_streams.items()
+            )
+        )

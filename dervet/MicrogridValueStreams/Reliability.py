@@ -232,7 +232,7 @@ class Reliability(ValueStream):
         """
 
         consts = []
-        cost_funcs = sum([der_instance.get_capex() for der_instance in der_list])
+        cost_funcs = sum(der_instance.get_capex() for der_instance in der_list)
         outage_length = int(self.outage_duration / self.dt)
 
         mask = pd.Series(index=opt_index)
@@ -256,10 +256,12 @@ class Reliability(ValueStream):
                     gen_sum += der_instance.get_discharge(mask)
                 if der_instance.technology_type == 'Intermittent Resource':
                     gen_sum += der_instance.get_discharge(mask) * \
-                               der_instance.nu
+                                   der_instance.nu
             critical_load = self.critical_load.loc[mask].values
             if self.load_shed:
-                critical_load = critical_load * (self.load_shed_data[0:outage_length].values / 100)
+                critical_load = critical_load * (
+                    self.load_shed_data[:outage_length].values / 100
+                )
 
             critical_load_arr = cvx.Parameter(value=critical_load,
                                               shape=outage_length)
@@ -469,12 +471,11 @@ class Reliability(ValueStream):
                                     decimals=5)
             reliability_check = np.around(critical_load_sub - gen_sub -
                                           var_pv_sub, decimals=5)
-            energy_requirement_check = reliability_check * largest_gamma
         else:
             extra_index = ts_max_index - len(self.critical_load)
             if extra_index <= 0:
                 cl_with_loadshed = critical_load_sub * \
-                                   (self.load_shed_data / 100)
+                                       (self.load_shed_data / 100)
             else:
                 load_shed_data = self.load_shed_data[:-extra_index]
                 cl_with_loadshed = critical_load_sub * (load_shed_data / 100)
@@ -482,8 +483,7 @@ class Reliability(ValueStream):
                                     decimals=5)
             reliability_check = np.around(cl_with_loadshed - gen_sub -
                                           var_pv_sub, decimals=5)
-            energy_requirement_check = reliability_check * largest_gamma
-
+        energy_requirement_check = reliability_check * largest_gamma
         return demand_left, reliability_check, energy_requirement_check
 
     def simulate_outage(self, reliability_check, demand_left, energy_check,
@@ -523,7 +523,7 @@ class Reliability(ValueStream):
         current_reliability_check = self.get_first_data(reliability_check)
         current_demand_left = self.get_first_data(demand_left)
         current_energy_check = self.get_first_data(energy_check)
-        if 0 >= current_reliability_check:
+        if current_reliability_check <= 0:
             # check to see if there is space to storage energy in the ESS to
             # save extra generation
             physical_energy_max = kwargs.get('operation SOE max', 0)
@@ -538,32 +538,29 @@ class Reliability(ValueStream):
                 # there is no space to save the extra generation, so the ess
                 # will not do anything
                 next_soe = init_soe
-        # can reliably meet the outage in that timestep: jump to SIMULATE
-        # OUTAGE IN NEXT TIMESTEP
         else:
             # check that there is enough SOC in the ESS to satisfy worst case
             energy_min = kwargs.get('operation SOE min')
-            if energy_min is not None:
-                if 0 >= np.around(current_energy_check * self.dt - init_soe, decimals=2):
-                    # so discharge to meet the load offset by all generation
-                    discharge_possible = (init_soe - energy_min) / self.dt
-                    discharge = min(discharge_possible, current_demand_left,
-                                    kwargs.get('discharge max', 0))
-                    if 0 < np.around(current_demand_left - discharge, decimals=2):
-                        # can't discharge enough to meet demand
-                        return []
-                    # update the state of charge of the ESS
-                    next_soe = init_soe - (discharge * self.dt)
-                    # we can reliably meet the outage in that timestep: jump to
-                    # SIMULATE OUTAGE IN NEXT TIMESTEP
-                else:
-                    # there is not enough energy in the ESS to cover the load
-                    # reliability
-                    return []
-            else:
+            if energy_min is None:
                 # there is no more that can be discharged to meet the load
                 # requirement
                 return []
+            if (
+                np.around(current_energy_check * self.dt - init_soe, decimals=2)
+                > 0
+            ):
+                # there is not enough energy in the ESS to cover the load
+                # reliability
+                return []
+            # so discharge to meet the load offset by all generation
+            discharge_possible = (init_soe - energy_min) / self.dt
+            discharge = min(discharge_possible, current_demand_left,
+                            kwargs.get('discharge max', 0))
+            if np.around(current_demand_left - discharge, decimals=2) > 0:
+                # can't discharge enough to meet demand
+                return []
+            # update the state of charge of the ESS
+            next_soe = init_soe - (discharge * self.dt)
         # SIMULATE OUTAGE IN NEXT TIMESTEP
         kwargs['init_soe'] = next_soe
         return [next_soe] + self.simulate_outage(reliability_check[1:], demand_left[1:],
@@ -640,8 +637,9 @@ class Reliability(ValueStream):
                 if outage_ind + self.outage_duration > data_length:
                     remaining_out_duration = data_length - outage_ind
                     crit_load_values = np.zeros(self.outage_duration)
-                    crit_load_values[0:remaining_out_duration] = \
-                        self.critical_load.loc[outage_mask].values
+                    crit_load_values[
+                        :remaining_out_duration
+                    ] = self.critical_load.loc[outage_mask].values
                     load = cvx.Parameter(value=crit_load_values,
                                          shape=self.outage_duration)
 
@@ -670,8 +668,8 @@ class Reliability(ValueStream):
                 month_min_soc_array = []
                 outage_ind = 0
                 # TODO make sure this is in order
-                for month in month_min_soc.keys():
-                    for hours in range(len(month_min_soc[month])):
+                for month in month_min_soc:
+                    for _ in range(len(month_min_soc[month])):
                         month_min_soc_array.append(
                             month_min_soc[month][outage_ind].value[0])
                         outage_ind += 1
@@ -788,18 +786,20 @@ class Reliability(ValueStream):
             keys are the file name that the df will be saved with
 
         """
-        df_dict = {}
         TellUser.info(
             'Starting load coverage calculation. This may take a while.')
-        df_dict['load_coverage_prob'] = self.load_coverage_probability(
-            der_list, time_series_data, technology_summary)
+        df_dict = {
+            'load_coverage_prob': self.load_coverage_probability(
+                der_list, time_series_data, technology_summary
+            )
+        }
         TellUser.info('Finished load coverage calculation.')
         df_dict['lcp_outage_soe_profiles'] = self.outage_soe_profile
         # calculate potential energy contribution from each DER in every outage
         if not self.post_facto_only:
             self.contribution_summary(technology_summary, time_series_data)
             df_dict['outage_energy_contributions'] = \
-                self.outage_contribution_df
+                    self.outage_contribution_df
 
         return df_dict
 
@@ -838,7 +838,7 @@ class Reliability(ValueStream):
             pv_outage_e += net_outage_energy.clip(upper=0)
 
             # record contribution
-            contribution_arrays.update({'PV Outage Contribution (kWh)': pv_outage_e})
+            contribution_arrays['PV Outage Contribution (kWh)'] = pv_outage_e
 
         ess_names = technology_summary_df.loc[
             technology_summary_df['Type'] == 'Energy Storage System']
@@ -859,16 +859,14 @@ class Reliability(ValueStream):
             ess_outage = ess_outage + net_outage_energy.clip(upper=0)
 
             # record contribution
-            contribution_arrays.update(
-                {'Storage Outage Contribution (kWh)': ess_outage.values})
+            contribution_arrays['Storage Outage Contribution (kWh)'] = ess_outage.values
 
         ice_names = technology_summary_df.loc[
             technology_summary_df['Type'] == 'ICE']
         if len(ice_names):
             # supplies what every energy that cannot be by pv and diesel
             # diesel_contribution is what ever is left
-            contribution_arrays.update(
-                {'ICE Outage Contribution (kWh)': outage_energy.values})
+            contribution_arrays['ICE Outage Contribution (kWh)'] = outage_energy.values
 
         self.outage_contribution_df = pd.DataFrame(contribution_arrays,
                                                    index=self.critical_load.index)
@@ -894,7 +892,7 @@ class Reliability(ValueStream):
         # 1) collect information required to call simulate_outage
         aggregate_soe = None
         dg_gen, total_pv_max, der_props, total_pv_vari, largest_gamma = \
-            self.get_der_mix_properties(der_list)
+                self.get_der_mix_properties(der_list)
         if 'Energy Storage System' in technology_summary_df['Type'].values:
             # save the state of charge
             if self.use_user_const:
@@ -920,7 +918,7 @@ class Reliability(ValueStream):
             if aggregate_soe is not None:
                 der_props['init_soe'] = aggregate_soe[outage_init]
             demand_left, reliability_check, energy_requirement_check = \
-                self.data_process(outage_init, dg_gen,
+                    self.data_process(outage_init, dg_gen,
                                   total_pv_max, der_props,
                                   total_pv_vari, largest_gamma)
 
@@ -935,7 +933,7 @@ class Reliability(ValueStream):
             for key, value in self.outage_soe_profile.items():
                 value.append(outage_soc_profile[key-1] if key-1 < coverage_length else 0)
 
-            frequency_simulate_outage[int(coverage_length)] += 1
+            frequency_simulate_outage[coverage_length] += 1
             # start outage on next timestep
             outage_init += 1
 

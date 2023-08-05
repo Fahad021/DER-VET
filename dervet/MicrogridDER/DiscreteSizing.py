@@ -92,7 +92,7 @@ class DiscreteSizing:
         """
         costs = {}
         if self.being_sized():
-            costs[self.name + '_ccost'] = self.get_capex()
+            costs[f'{self.name}_ccost'] = self.get_capex()
 
         return costs
 

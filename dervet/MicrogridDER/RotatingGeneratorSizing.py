@@ -73,12 +73,11 @@ class RotatingGeneratorSizing(RotatingGenerator, DERExtension, ContinuousSizing)
         """
         if not solution or not self.being_sized():
             return super().discharge_capacity()
-        else:
-            try:
-                rated_power = self.rated_power.value
-            except AttributeError:
-                rated_power = self.rated_power
-            return rated_power * self.n
+        try:
+            rated_power = self.rated_power.value
+        except AttributeError:
+            rated_power = self.rated_power
+        return rated_power * self.n
 
     def name_plate_capacity(self, solution=False):
         """ Returns the value of 1 generator in a set of generators
@@ -91,12 +90,11 @@ class RotatingGeneratorSizing(RotatingGenerator, DERExtension, ContinuousSizing)
         """
         if not solution:
             return self.rated_power
-        else:
-            try:
-                rated_power = self.rated_power.value
-            except AttributeError:
-                rated_power = self.rated_power
-            return rated_power
+        try:
+            rated_power = self.rated_power.value
+        except AttributeError:
+            rated_power = self.rated_power
+        return rated_power
 
     def get_capex(self, solution=False):
         capex = super().get_capex()
@@ -162,13 +160,13 @@ class RotatingGeneratorSizing(RotatingGenerator, DERExtension, ContinuousSizing)
         Returns: A dictionary describe this DER's size and captial costs.
 
         """
-        sizing_results = {
+        return {
             'DER': self.name,
             'Power Capacity (kW)': self.name_plate_capacity(True),
             'Capital Cost ($)': self.capital_cost_function[0],
             'Capital Cost ($/kW)': self.capital_cost_function[1],
-            'Quantity': self.n}
-        return sizing_results
+            'Quantity': self.n,
+        }
 
     def update_for_evaluation(self, input_dict):
         """ Updates price related attributes with those specified in the input_dictionary
@@ -198,8 +196,9 @@ class RotatingGeneratorSizing(RotatingGenerator, DERExtension, ContinuousSizing)
 
         """
         if self.min_rated_power < self.p_min:
-            TellUser.error(f'{self.unique_tech_id()} would not be able to have a rating less than {self.p_min}. ' +
-                           f'Please update min_rated_power to reflect this constraint.')
+            TellUser.error(
+                f'{self.unique_tech_id()} would not be able to have a rating less than {self.p_min}. Please update min_rated_power to reflect this constraint.'
+            )
             return True
         return False
 
@@ -212,12 +211,11 @@ class RotatingGeneratorSizing(RotatingGenerator, DERExtension, ContinuousSizing)
         return np.dot(self.replacement_cost_function, [self.n, self.discharge_capacity(True)])
 
     def max_p_schedule_down(self):
-        # ability to provide regulation down through discharging less
-        if isinstance(self.rated_power, cvx.Variable):
-            max_discharging_range = np.inf
-        else:
-            max_discharging_range = self.discharge_capacity() - self.p_min
-        return max_discharging_range
+        return (
+            np.inf
+            if isinstance(self.rated_power, cvx.Variable)
+            else self.discharge_capacity() - self.p_min
+        )
 
     def max_power_out(self):
         """
@@ -225,6 +223,5 @@ class RotatingGeneratorSizing(RotatingGenerator, DERExtension, ContinuousSizing)
         Returns: the maximum power that can be outputted by this genset
 
         """
-        power_out = self.n * self.rated_power
-        return power_out
+        return self.n * self.rated_power
 

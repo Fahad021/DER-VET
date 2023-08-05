@@ -111,23 +111,17 @@ class CHP(CT):
         tech_id = self.unique_tech_id()
         results = super().timeseries_report()
 
-        results[tech_id + ' Steam Generation (kW)'] = self.variables_df['steam']
-        results[tech_id + ' Hot Water Generation (kW)'] = self.variables_df['hotwater']
+        results[f'{tech_id} Steam Generation (kW)'] = self.variables_df['steam']
+        results[f'{tech_id} Hot Water Generation (kW)'] = self.variables_df['hotwater']
         if self.site_steam_load is not None:
-            results[tech_id + ' Site Steam Thermal Load (BTU/hr)'] = self.site_steam_load
+            results[f'{tech_id} Site Steam Thermal Load (BTU/hr)'] = self.site_steam_load
         if self.site_hotwater_load is not None:
-            results[tech_id + ' Site Hot Water Thermal Load (BTU/hr)'] = self.site_hotwater_load
+            results[
+                f'{tech_id} Site Hot Water Thermal Load (BTU/hr)'
+            ] = self.site_hotwater_load
 
         return results
 
     def objective_function(self, mask, annuity_scalar=1):
 
-        costs = super().objective_function(mask, annuity_scalar)
-
-#        # add startup objective costs
-#        if self.startup:
-#            # TODO this is NOT how you would calculate the start up cost of a CHP. pls look at formulation doc and revise --HN
-#            # TODO This can be easily fixed, but let's do it some other time, when everything else works --AC
-#            costs[self.name + 'startup': cvx.sum(self.variables_dict['on']) * self.p_startup * annuity_scalar]
-
-        return costs
+        return super().objective_function(mask, annuity_scalar)

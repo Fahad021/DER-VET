@@ -63,8 +63,7 @@ class ICE(InternalCombustionEngine.ICE, RotatingGeneratorSizing):
         Returns:
             A list of constraints that corresponds the battery's physical constraints and its service constraints
         """
-        constraint_list = super().constraints(mask)
-        return constraint_list
+        return super().constraints(mask)
 
     def objective_function(self, mask, annuity_scalar=1):
         """ Generates the objective function related to a technology. Default includes O&M which can be 0
@@ -77,9 +76,7 @@ class ICE(InternalCombustionEngine.ICE, RotatingGeneratorSizing):
         Returns:
             self.costs (Dict): Dict of objective costs
         """
-        costs = super().objective_function(mask, annuity_scalar)
-
-        return costs
+        return super().objective_function(mask, annuity_scalar)
 
     def update_for_evaluation(self, input_dict):
         """ Updates price related attributes with those specified in the input_dictionary

@@ -42,8 +42,7 @@ def run_case(model_param_location: str):
 
 def check_initialization(model_param_location: str):
     print(f"Testing {model_param_location}...")
-    case = DERVET(model_param_location)
-    return case
+    return DERVET(model_param_location)
 
 
 def assert_file_exists(model_results, results_file_name='timeseries_results'):
@@ -57,10 +56,12 @@ def assert_file_exists(model_results, results_file_name='timeseries_results'):
 
 
 def assert_within_error_bound(actual: float, test_value: float, error_bound: float, error_message: str):
-    diff = abs(actual-test_value)
-    if not diff:
+    if diff := abs(actual - test_value):
+        assert (
+            diff / actual <= error_bound / 100
+        ), f'{error_message}Test value: {test_value}   Should be in range: ({actual + actual * (error_bound / 100)},{actual - actual * (error_bound / 100)}) \n'
+    else:
         return
-    assert diff/actual <= error_bound/100, error_message + f'Test value: {test_value}   Should be in range: ({actual+(actual*(error_bound/100))},{actual-(actual*(error_bound/100))}) \n'
 
 
 ##########################################

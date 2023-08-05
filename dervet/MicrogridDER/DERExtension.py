@@ -260,9 +260,10 @@ class DERExtension:
         """
         # collect salvage value
         salvage_value = self.calculate_salvage_value(end_year)
-        # dataframe
-        salvage_pd = pd.DataFrame({f"{self.unique_tech_id()} Salvage Value": salvage_value}, index=[end_year])
-        return salvage_pd
+        return pd.DataFrame(
+            {f"{self.unique_tech_id()} Salvage Value": salvage_value},
+            index=[end_year],
+        )
 
     def economic_carrying_cost_report(self, i, end_year, escalation_func):
         """ assumes length of project is the lifetime expectancy of this DER

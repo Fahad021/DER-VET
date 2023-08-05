@@ -174,12 +174,11 @@ class IntermittentResourceSizing(PVSystem.PV, DERExtension, ContinuousSizing):
         """
         if not sizing:
             return self.rated_capacity
-        else:
-            try:
-                max_rated = self.rated_capacity.value
-            except AttributeError:
-                max_rated = self.rated_capacity
-            return max_rated
+        try:
+            max_rated = self.rated_capacity.value
+        except AttributeError:
+            max_rated = self.rated_capacity
+        return max_rated
 
     def get_rated_capacity(self, solution=False):
         """
@@ -189,12 +188,11 @@ class IntermittentResourceSizing(PVSystem.PV, DERExtension, ContinuousSizing):
         """
         if not solution:
             return self.rated_capacity
-        else:
-            try:
-                max_rated = self.rated_capacity.value
-            except AttributeError:
-                max_rated = self.rated_capacity
-            return max_rated
+        try:
+            max_rated = self.rated_capacity.value
+        except AttributeError:
+            max_rated = self.rated_capacity
+        return max_rated
 
     def sizing_summary(self):
         """
@@ -303,13 +301,7 @@ class IntermittentResourceSizing(PVSystem.PV, DERExtension, ContinuousSizing):
             return pd.Series()
 
     def decommissioning_report(self, end_year):
-        if not self.ppa:
-            return super().decommissioning_report(end_year)
-        else:
-            return pd.Series()
+        return pd.Series() if self.ppa else super().decommissioning_report(end_year)
 
     def salvage_value_report(self, end_year):
-        if not self.ppa:
-            return super().salvage_value_report(end_year)
-        else:
-            return pd.Series()
+        return super().salvage_value_report(end_year) if not self.ppa else pd.Series()

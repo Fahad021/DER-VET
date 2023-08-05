@@ -79,15 +79,13 @@ class ParamsDER(Params):
                     id_tag_sub = tag_sub.loc[tag_sub.ID == id_str]
                     # middle loop for each object's elements and is sensitivity is needed: max_ch_rated, ene_rated, price, etc.
                     for _, row in id_tag_sub.iterrows():
-                        # skip adding to JSON if no value is given
                         if row['Key'] is np.nan or row['Evaluation Value'] == '.' or row['Evaluation Active'] == '.':
                             continue
-                        else:
-                            key_attrib = json_tree['tags'][obj][str(id_str)]['keys'][row['Key']]
-                            key_attrib['evaluation'] = {
-                                "active": str(row['Evaluation Active']),
-                                "value": str(row['Evaluation Value'])
-                            }
+                        key_attrib = json_tree['tags'][obj][str(id_str)]['keys'][row['Key']]
+                        key_attrib['evaluation'] = {
+                            "active": str(row['Evaluation Active']),
+                            "value": str(row['Evaluation Value'])
+                        }
         return json_tree
 
     @classmethod
@@ -106,7 +104,7 @@ class ParamsDER(Params):
         """
         cls.instances = super().initialize(filename, verbose)  # everything that initialize does in Params (steps 1-4)
         # 1) INITIALIZE CLASS VARIABLES
-        cls.sensitivity['cba_values'] = dict()
+        cls.sensitivity['cba_values'] = {}
         cls.cba_input_error_raised = False
 
         # 5) load direct data and create input template
@@ -161,8 +159,7 @@ class ParamsDER(Params):
         Returns: a template structure that summarizes the inputs for a CBA instance
 
         """
-        template = dict()
-        template['Scenario'] = cls.read_and_validate_evaluation('Scenario')
+        template = {'Scenario': cls.read_and_validate_evaluation('Scenario')}
         template['Finance'] = cls.read_and_validate_evaluation('Finance')
 
         # create dictionary for CBA values for DERs
@@ -194,9 +191,9 @@ class ParamsDER(Params):
             or None if no values are active.
 
         """
-        if '.json' == cls.filename.suffix:
+        if cls.filename.suffix == '.json':
             return cls.read_and_validate_evaluation_json(name)
-        if '.xml' == cls.filename.suffix:
+        if cls.filename.suffix == '.xml':
             return cls.read_and_validate_evaluation_xml(name)
 
     @classmethod
@@ -245,7 +242,7 @@ class ParamsDER(Params):
                         else:
                             valuation_entry = None
                             intended_type = key.find('Type').text
-                            if key.get('analysis')[0].lower() == 'y' or key.get('analysis')[0].lower() == '1':
+                            if key.get('analysis')[0].lower() in ['y', '1']:
                                 # if analysis, then convert each value and save as list
                                 tag_key = (tag.tag, key.tag, tag.get('id'))
                                 sensitivity_values = cls.extract_data(key.find('Evaluation').text, intended_type)
@@ -531,20 +528,20 @@ class ParamsDER(Params):
             if not battery_inputs['ch_max_rated'] or not battery_inputs['dis_max_rated']:
                 if battery_inputs['incl_cycle_degrade']:
                     self.record_input_error(
-                        f'Error: BATTERY {id_str}: Degradation with power sizing is still under ' +
-                        f'development. Please choose to do one or the other.')
-                if not battery_inputs['ch_max_rated']:
-                    if battery_inputs['user_ch_rated_min'] > battery_inputs['user_ch_rated_max']:
-                        self.record_input_error('Error: User battery min charge power requirement is greater than max charge power requirement.' +
-                                                f"BATTERY {id_str}")
-                if not battery_inputs['dis_max_rated']:
-                    if battery_inputs['user_dis_rated_min'] > battery_inputs['user_dis_rated_max']:
-                        self.record_input_error('User battery min discharge power requirement is greater than max discharge power requirement.')
+                        f'Error: BATTERY {id_str}: Degradation with power sizing is still under development. Please choose to do one or the other.'
+                    )
+            if not battery_inputs['ch_max_rated']:
+                if battery_inputs['user_ch_rated_min'] > battery_inputs['user_ch_rated_max']:
+                    self.record_input_error('Error: User battery min charge power requirement is greater than max charge power requirement.' +
+                                            f"BATTERY {id_str}")
+            if not battery_inputs['dis_max_rated']:
+                if battery_inputs['user_dis_rated_min'] > battery_inputs['user_dis_rated_max']:
+                    self.record_input_error('User battery min discharge power requirement is greater than max discharge power requirement.')
             if not battery_inputs['ene_max_rated']:
                 if battery_inputs['incl_cycle_degrade']:
                     self.record_input_error(
-                        f'Error: BATTERY {id_str}: Degradation with energy sizing is still under' +
-                        f' development. Please choose to do one or the other.')
+                        f'Error: BATTERY {id_str}: Degradation with energy sizing is still under development. Please choose to do one or the other.'
+                    )
                 if battery_inputs['user_ene_rated_min'] > battery_inputs['user_ene_rated_max']:
                     self.record_input_error('Error: User battery min energy requirement is greater than max energy requirement.')
             # check if user wants to include timeseries constraints -> grab data
@@ -564,11 +561,11 @@ class ParamsDER(Params):
             if caes_inputs['incl_ts_discharge_limits']:
                 self.load_ts_limits(id_str, caes_inputs, 'CAES', 'Discharge', 'kW', time_series)
 
+        # check to make sure data was included
+        col_name = "Site Load (kW)"
         for id_str, load_inputs in self.ControllableLoad.items():
-            # check to make sure data was included
-            col_name = "Site Load (kW)"
             error_msg = f"Missing '{col_name}/{id_str}' from timeseries " \
-                        f"input. Please include a site load."
+                            f"input. Please include a site load."
             load_value = self.grab_column(time_series, col_name, error_msg,
                                           id_str)
             load_inputs['site_load'] = load_value
@@ -702,7 +699,7 @@ class ParamsDER(Params):
 
         """
         super().read_referenced_data()
-        cls.referenced_data['load_shed_percentage'] = dict()
+        cls.referenced_data['load_shed_percentage'] = {}
         rel_files = cls.grab_value_set('Reliability', 'load_shed_perc_filename')
         for rel_file in rel_files:
             cls.referenced_data['load_shed_percentage'][rel_file] = cls.read_from_file('load_shed_percentage', rel_file,'Outage Length (hrs)')

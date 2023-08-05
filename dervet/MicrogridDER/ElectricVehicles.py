@@ -57,7 +57,7 @@ class ElectricVehicle1(DER, ContinuousSizing, DERExtension):
         Args:
             params (dict): Dict of parameters
         """
-        TellUser.debug(f"Initializing ElectricVehicle1")
+        TellUser.debug("Initializing ElectricVehicle1")
         # create generic technology object
         DER.__init__(self, params)
         ContinuousSizing.__init__(self, params)
@@ -251,9 +251,9 @@ class ElectricVehicle1(DER, ContinuousSizing, DERExtension):
         # energy evolution generally for every time step
 
         numeric_unplugged_index = pd.Series(range(len(self.unplugged_index)), index=self.unplugged_index.index).loc[self.unplugged_index]
-        ene_ini_window = 0
-
         if numeric_unplugged_index.iloc[0] == 0:  # energy evolution for the EV, only during plugged times
+            ene_ini_window = 0
+
             constraint_list += [cvx.Zero(ene[numeric_unplugged_index.iloc[0]] - ene_ini_window)]
             constraint_list += [cvx.Zero(ene[list(numeric_unplugged_index.iloc[1:])] - ene[list(numeric_unplugged_index.iloc[1:] - 1)] - (
                         self.dt * ch[list(numeric_unplugged_index.iloc[1:] - 1)]))]  # - uene[list(numeric_unplugged_index.iloc[1:]-1)])]
@@ -353,8 +353,7 @@ class ElectricVehicle1(DER, ContinuousSizing, DERExtension):
         Returns: A dictionary describe this DER's size and captial costs.
 
         """
-        # template = pd.DataFrame(columns=)
-        sizing_dict = {
+        return {
             'DER': np.nan,
             'Energy Rating (kWh)': np.nan,
             'Charge Rating (kW)': np.nan,
@@ -369,7 +368,6 @@ class ElectricVehicle1(DER, ContinuousSizing, DERExtension):
             'Power Capacity (kW)': np.nan,
             'Quantity': 1,
         }
-        return sizing_dict
 
 
 class ElectricVehicle2(DER, ContinuousSizing, DERExtension):
@@ -387,7 +385,7 @@ class ElectricVehicle2(DER, ContinuousSizing, DERExtension):
         Args:
             params (dict): Dict of parameters
         """
-        TellUser.debug(f"Initializing ElectricVehicle2")
+        TellUser.debug("Initializing ElectricVehicle2")
         # create generic technology object
         DER.__init__(self, params)
         ContinuousSizing.__init__(self, params)
@@ -506,14 +504,12 @@ class ElectricVehicle2(DER, ContinuousSizing, DERExtension):
 
         # create objective expression for variable om based on discharge activity
         ch = self.variables_dict['ch']
-        costs = {
+        return {
             self.name + ' fixed_om': self.fixed_om * annuity_scalar,
-            self.name + ' lost_load_cost': cvx.sum(self.EV_load_TS[mask].values - ch) * self.lost_load_cost  # added to account for lost load
-
+            self.name
+            + ' lost_load_cost': cvx.sum(self.EV_load_TS[mask].values - ch)
+            * self.lost_load_cost,  # added to account for lost load
         }
-        # add startup objective costs
-
-        return costs
 
     def constraints(self, mask):
         """Default build constraint list method. Used by services that do not have constraints.
@@ -594,8 +590,7 @@ class ElectricVehicle2(DER, ContinuousSizing, DERExtension):
         Returns: A dictionary describe this DER's size and captial costs.
 
         """
-        # template = pd.DataFrame(columns=)
-        sizing_dict = {
+        return {
             'DER': np.nan,
             'Energy Rating (kWh)': np.nan,
             'Charge Rating (kW)': np.nan,
@@ -610,4 +605,3 @@ class ElectricVehicle2(DER, ContinuousSizing, DERExtension):
             'Power Capacity (kW)': np.nan,
             'Quantity': 1,
         }
-        return sizing_dict

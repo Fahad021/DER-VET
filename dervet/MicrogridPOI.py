@@ -95,11 +95,15 @@ class MicrogridPOI(POI):
         # collect errors and raise if any were found
         errors_found = [1 if der.sizing_error() else 0 for der in self.der_list]
         if sum(errors_found):
-            raise ParameterError(f'Sizing of DERs has an error. Please check error log.')
+            raise ParameterError('Sizing of DERs has an error. Please check error log.')
 
     def is_any_sizable_der_missing_power_max(self):
-        return bool(sum([1 if not der_inst.max_power_defined else 0
-                         for der_inst in self.der_list]))
+        return bool(
+            sum(
+                1 if not der_inst.max_power_defined else 0
+                for der_inst in self.der_list
+            )
+        )
 
     def set_size(self, value_streams, start_year):
         """ part of Deferral's sizing module: TODO USE THIS INSTEAD OF set_size IN MICROGRID SERVICE AGGREGATOR
@@ -171,8 +175,8 @@ class MicrogridPOI(POI):
         """
         # get values from storagevet/poi method
         load_sum, var_gen_sum, gen_sum, tot_net_ess, total_soe, agg_power_flows_in, \
-            agg_power_flows_out, agg_steam_heating_power, agg_hotwater_heating_power, \
-            agg_thermal_cooling_power = super().get_state_of_system(mask)
+                agg_power_flows_out, agg_steam_heating_power, agg_hotwater_heating_power, \
+                agg_thermal_cooling_power = super().get_state_of_system(mask)
 
         # dervet-specific
         for der_inst in self.active_ders:
@@ -181,36 +185,43 @@ class MicrogridPOI(POI):
                 load_sum += der_inst.get_charge(mask)
                 # total_soe += der_instance.get_state_of_energy(mask)
 
-            # thermal power recovered: hot (steam/hotwater) and cold
             if der_inst.is_hot:
                 if self.site_steam_load is None and self.site_hotwater_load is None:
-                    TellUser.warning('A heat source technology is active ' +
-                                     f'({der_inst.unique_tech_id()}), but you have set the ' +
-                                     f'scenario parameter incl_thermal_load to False. Any ' +
-                                     f'thermal load will be ignored.')
+                    TellUser.warning(
+                        (
+                            (
+                                'A heat source technology is active '
+                                + f'({der_inst.unique_tech_id()}), but you have set the '
+                                + 'scenario parameter incl_thermal_load to False. Any '
+                            )
+                            + 'thermal load will be ignored.'
+                        )
+                    )
                 else:
                     if self.site_steam_load is not None:
-                        TellUser.debug(f'adding heat (steam) recovered from this DER: ' +
-                                       f'{der_inst.unique_tech_id()}')
+                        TellUser.debug(
+                            f'adding heat (steam) recovered from this DER: {der_inst.unique_tech_id()}'
+                        )
                         agg_steam_heating_power += der_inst.get_steam_recovered(mask)
                     if self.site_hotwater_load is not None:
-                        TellUser.debug(f'adding heat (hotwater) recovered from this DER: ' +
-                                       f'{der_inst.unique_tech_id()}')
+                        TellUser.debug(
+                            f'adding heat (hotwater) recovered from this DER: {der_inst.unique_tech_id()}'
+                        )
                         agg_hotwater_heating_power += der_inst.get_hotwater_recovered(mask)
             if der_inst.is_cold:
                 if self.site_cooling_load is None:
-                    TellUser.warning(f'A cold source technology is active ' +
-                                     f'({der_inst.unique_tech_id()}), but you have set the ' +
-                                     f'scenario parameter incl_thermal_load to False. Any ' +
-                                     f'thermal load will be ignored.')
+                    TellUser.warning(
+                        f'A cold source technology is active ({der_inst.unique_tech_id()}), but you have set the scenario parameter incl_thermal_load to False. Any thermal load will be ignored.'
+                    )
                 else:
-                    TellUser.debug(f'adding cold recovered from this DER: ' +
-                                   f'{der_inst.unique_tech_id()}')
+                    TellUser.debug(
+                        f'adding cold recovered from this DER: {der_inst.unique_tech_id()}'
+                    )
                     agg_thermal_cooling_power += der_inst.get_cold_recovered(mask)
 
         return load_sum, var_gen_sum, gen_sum, tot_net_ess, total_soe, agg_power_flows_in, \
-            agg_power_flows_out, agg_steam_heating_power, agg_hotwater_heating_power, \
-            agg_thermal_cooling_power
+                agg_power_flows_out, agg_steam_heating_power, agg_hotwater_heating_power, \
+                agg_thermal_cooling_power
 
     def optimization_problem(self, mask, power_in, power_out, steam_in, hotwater_in, cold_in,
                              annuity_scalar=1):

@@ -145,12 +145,11 @@ class ESSSizing(EnergyStorage, DERExtension, ContinuousSizing):
         """
         if not solution:
             return self.dis_max_rated
-        else:
-            try:
-                dis_max_rated = int(self.dis_max_rated.value)
-            except AttributeError:
-                dis_max_rated = self.dis_max_rated
-            return dis_max_rated
+        try:
+            dis_max_rated = int(self.dis_max_rated.value)
+        except AttributeError:
+            dis_max_rated = self.dis_max_rated
+        return dis_max_rated
 
     def charge_capacity(self, solution=False):
         """
@@ -160,12 +159,11 @@ class ESSSizing(EnergyStorage, DERExtension, ContinuousSizing):
         """
         if not solution:
             return self.dis_max_rated
-        else:
-            try:
-                ch_max_rated = int(self.ch_max_rated.value)
-            except AttributeError:
-                ch_max_rated = self.ch_max_rated
-            return ch_max_rated
+        try:
+            ch_max_rated = int(self.ch_max_rated.value)
+        except AttributeError:
+            ch_max_rated = self.ch_max_rated
+        return ch_max_rated
 
     def energy_capacity(self, solution=False):
         """
@@ -175,12 +173,11 @@ class ESSSizing(EnergyStorage, DERExtension, ContinuousSizing):
         """
         if not solution:
             return self.ene_max_rated
-        else:
-            try:
-                max_rated = int(self.ene_max_rated.value)
-            except AttributeError:
-                max_rated = self.ene_max_rated
-            return max_rated
+        try:
+            max_rated = int(self.ene_max_rated.value)
+        except AttributeError:
+            max_rated = self.ene_max_rated
+        return max_rated
 
     def operational_max_energy(self, solution=False):
         """
@@ -190,12 +187,11 @@ class ESSSizing(EnergyStorage, DERExtension, ContinuousSizing):
         """
         if not solution:
             return super(ESSSizing, self).operational_max_energy()
-        else:
-            try:
-                effective_soe_max = self.effective_soe_max.value
-            except AttributeError:
-                effective_soe_max = self.effective_soe_max
-            return effective_soe_max
+        try:
+            effective_soe_max = self.effective_soe_max.value
+        except AttributeError:
+            effective_soe_max = self.effective_soe_max
+        return effective_soe_max
 
     def operational_min_energy(self, solution=False):
         """
@@ -204,12 +200,11 @@ class ESSSizing(EnergyStorage, DERExtension, ContinuousSizing):
         """
         if not solution:
             return super(ESSSizing, self).operational_min_energy()
-        else:
-            try:
-                effective_soe_min = self.effective_soe_min.value
-            except AttributeError:
-                effective_soe_min = self.effective_soe_min
-            return effective_soe_min
+        try:
+            effective_soe_min = self.effective_soe_min.value
+        except AttributeError:
+            effective_soe_min = self.effective_soe_min
+        return effective_soe_min
 
     def get_capex(self, solution=False):
         capex = super().get_capex()
@@ -298,14 +293,14 @@ class ESSSizing(EnergyStorage, DERExtension, ContinuousSizing):
         tech_id = self.unique_tech_id()
         results = super().timeseries_report()
         if self.incl_energy_limits:
-            results[tech_id + ' User Energy Max (kWh)'] = self.limit_energy_max
-            results[tech_id + ' User Energy Min (kWh)'] = self.limit_energy_min
+            results[f'{tech_id} User Energy Max (kWh)'] = self.limit_energy_max
+            results[f'{tech_id} User Energy Min (kWh)'] = self.limit_energy_min
         if self.incl_charge_limits:
-            results[tech_id + ' User Charge Max (kW)'] = self.limit_charge_max
-            results[tech_id + ' User Charge Min (kW)'] = self.limit_charge_min
+            results[f'{tech_id} User Charge Max (kW)'] = self.limit_charge_max
+            results[f'{tech_id} User Charge Min (kW)'] = self.limit_charge_min
         if self.incl_discharge_limits:
-            results[tech_id + ' User Discharge Max (kW)'] = self.limit_discharge_max
-            results[tech_id + ' User Discharge Min (kW)'] = self.limit_discharge_min
+            results[f'{tech_id} User Discharge Max (kW)'] = self.limit_discharge_max
+            results[f'{tech_id} User Discharge Min (kW)'] = self.limit_discharge_min
 
         return results
 
@@ -366,9 +361,7 @@ class ESSSizing(EnergyStorage, DERExtension, ContinuousSizing):
         except AttributeError:
             energy_rated = self.ene_max_rated
         discharge = self.discharge_capacity(solution=True)
-        if discharge == 0 or energy_rated == 0:
-            return 0
-        return energy_rated / discharge
+        return 0 if discharge == 0 or energy_rated == 0 else energy_rated / discharge
 
     def update_for_evaluation(self, input_dict):
         """ Updates price related attributes with those specified in the input_dictionary

@@ -177,8 +177,10 @@ class MicrogridScenario(Scenario):
                 self.reliability_sizing = True
                 # require only 1 ESS is present.
                 # TODO extend this module to multiple ESSs
-                num_ess = sum([1 if der_inst.technology_type == 'Energy Storage System' else 0
-                               for der_inst in der_lst])
+                num_ess = sum(
+                    1 if der_inst.technology_type == 'Energy Storage System' else 0
+                    for der_inst in der_lst
+                )
                 if num_ess > 1:
                     TellUser.error("Multiple ESS sizing with this reliability" +
                                    " module is not implemented yet.")
@@ -249,14 +251,16 @@ class MicrogridScenario(Scenario):
     def check_for_infeasible_regulation_constraints_with_system_size(self):
         """ perform error checks on DERs that are being sized with
         ts_user_constraints collect errors and raise if any were found"""
-        # down
-        has_errors = False
-        max_p_sch_down = sum([der_inst.max_p_schedule_down() for der_inst
-                              in self.poi.der_list])
-        min_p_res_down = sum([service.min_regulation_down() for service in
-                              self.service_agg.value_streams.values()])
+        max_p_sch_down = sum(
+            der_inst.max_p_schedule_down() for der_inst in self.poi.der_list
+        )
+        min_p_res_down = sum(
+            service.min_regulation_down()
+            for service in self.service_agg.value_streams.values()
+        )
         diff = max_p_sch_down - min_p_res_down
         negative_vals = np.less(diff, 0)
+        has_errors = False
         if np.any(negative_vals):
             first_time = diff.index[negative_vals][0]
             TellUser.error('The sum of minimum power regulation down exceeds the maximum ' +
@@ -265,16 +269,20 @@ class MicrogridScenario(Scenario):
             has_errors = True
         # up
         if {'FR', 'LF'} & self.service_agg.value_streams.keys():
-            max_p_sch_up = sum([der_inst.max_p_schedule_up() for der_inst in self.poi.der_list])
-            min_p_res_up = sum([service.min_regulation_up() for service in
-                                self.service_agg.value_streams.values()])
+            max_p_sch_up = sum(
+                der_inst.max_p_schedule_up() for der_inst in self.poi.der_list
+            )
+            min_p_res_up = sum(
+                service.min_regulation_up()
+                for service in self.service_agg.value_streams.values()
+            )
             diff = max_p_sch_up - min_p_res_up
             negative_vals = np.less(diff, 0)
             if np.any(negative_vals):
                 first_time = diff.index[negative_vals][0]
                 TellUser.error(
-                    'The sum of minimum power regulation up exceeds the maximum possible power capacities that ' +
-                    f'can provide regulation down, first occurring at time {first_time}.')
+                    f'The sum of minimum power regulation up exceeds the maximum possible power capacities that can provide regulation down, first occurring at time {first_time}.'
+                )
                 has_errors = True
         return has_errors
 

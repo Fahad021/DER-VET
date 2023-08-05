@@ -101,19 +101,20 @@ class CostBenefitAnalysis(Financial):
         Returns: pandas Period representation of the year that DERVET will end CBA analysis
 
         """
-        project_start_year = self.start_year
         user_given_end_year = self.end_year
         # (1) User-defined (this should continue to be default)
         if self.horizon_mode == 1:
             self.end_year = user_given_end_year
+        project_start_year = self.start_year
         # (2) Auto-calculate based on shortest equipment lifetime. (No size optimization)
         if self.horizon_mode == 2:
             shortest_lifetime = 1000  # no technology should last 1000 years -- so this is safe to hardcode
             for der_instance in der_list:
                 shortest_lifetime = min(der_instance.expected_lifetime, shortest_lifetime)
                 if der_instance.being_sized():
-                    TellUser.error("Analysis horizon mode == 'Auto-calculate based on shortest equipment lifetime', DER-VET will not size any DERs " +
-                                   f"when this horizon mode is selected. {der_instance.name} is being sized. Please resolve and rerun.")
+                    TellUser.error(
+                        f"Analysis horizon mode == 'Auto-calculate based on shortest equipment lifetime', DER-VET will not size any DERs when this horizon mode is selected. {der_instance.name} is being sized. Please resolve and rerun."
+                    )
                     self.end_year = pd.Period(year=0, freq='y')  # cannot preform size optimization with mode==2
             self.end_year = project_start_year + shortest_lifetime-1
         # (3) Auto-calculate based on longest equipment lifetime. (No size optimization)
@@ -123,8 +124,9 @@ class CostBenefitAnalysis(Financial):
                 if der_instance.technology_type != 'Load':
                     longest_lifetime = max(der_instance.expected_lifetime, longest_lifetime)
                 if der_instance.being_sized():
-                    TellUser.error("Analysis horizon mode == 'Auto-calculate based on longest equipment lifetime', DER-VET will not size any DERs " +
-                                   f"when this horizon mode is selected. {der_instance.name} is being sized. Please resolve and rerun.")
+                    TellUser.error(
+                        f"Analysis horizon mode == 'Auto-calculate based on longest equipment lifetime', DER-VET will not size any DERs when this horizon mode is selected. {der_instance.name} is being sized. Please resolve and rerun."
+                    )
                     self.end_year = pd.Period(year=0, freq='y')  # cannot preform size optimization with mode==3
             self.end_year = project_start_year + longest_lifetime-1
         return self.end_year
@@ -143,8 +145,12 @@ class CostBenefitAnalysis(Financial):
 
         # check that a service in this set: {Reliability, Deferral} - the union of the 2 sets should not be 0
         if not len(set(service_dict.keys()) & {'Reliability', 'Deferral'}):
-            TellUser.error(f"An ecc analysis does not make sense for the case you selected. A reliability or asset deferral case" +
-                           "would be better suited for economic carrying cost analysis")
+            TellUser.error(
+                (
+                    "An ecc analysis does not make sense for the case you selected. A reliability or asset deferral case"
+                    + "would be better suited for economic carrying cost analysis"
+                )
+            )
             raise ModelParameterError("The combination of services does not work with the rest of your case settings. " +
                                       "Please see log file for more information.")
         # require that e < d
@@ -209,8 +215,7 @@ class CostBenefitAnalysis(Financial):
         while yr_index > 0:
             dollar_per_year[yr_index - 1] = dollar_per_year[yr_index] * (1 / (1 + self.inflation_rate))
             yr_index -= 1
-        lifetime_npv_alpha = np.npv(self.npv_discount_rate, [0] + dollar_per_year)
-        return lifetime_npv_alpha
+        return np.npv(self.npv_discount_rate, [0] + dollar_per_year)
 
     def calculate(self, technologies, value_streams, results, opt_years):
         """ this function calculates the proforma, cost-benefit, npv, and payback using the optimization variable results

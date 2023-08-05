@@ -108,13 +108,16 @@ class ControllableLoad(Load, DERExtension, ContinuousSizing):
         """
         # self.variables_dict = {}
         if self.duration:
-            self.variables_dict = {'power': cvx.Variable(shape=size, name='power'),  # p_t = charge_t - discharge_t
-                                   'upower': cvx.Variable(shape=size, name='upower'),
-                                   'ene_load': cvx.Variable(shape=size, name='ene', nonneg=True),
-                                   'uene': cvx.Variable(shape=size, name=self.name + '-uene', nonneg=True),
-                                   'udis': cvx.Variable(shape=size, name=self.name + '-udis'),
-                                   'uch': cvx.Variable(shape=size, name=self.name + '-uch'),
-                                   }
+            self.variables_dict = {
+                'power': cvx.Variable(shape=size, name='power'),
+                'upower': cvx.Variable(shape=size, name='upower'),
+                'ene_load': cvx.Variable(shape=size, name='ene', nonneg=True),
+                'uene': cvx.Variable(
+                    shape=size, name=f'{self.name}-uene', nonneg=True
+                ),
+                'udis': cvx.Variable(shape=size, name=f'{self.name}-udis'),
+                'uch': cvx.Variable(shape=size, name=f'{self.name}-uch'),
+            }
         return self.variables_dict
 
     def get_charge(self, mask):
@@ -281,18 +284,15 @@ class ControllableLoad(Load, DERExtension, ContinuousSizing):
         Returns: A dictionary describe this DER's size and captial costs.
 
         """
-        sizing_results = {
+        return {
             'DER': self.name,
             'Power Capacity (kW)': self.rated_power,
-            'Duration (hours)': self.duration
+            'Duration (hours)': self.duration,
         }
-        return sizing_results
 
     def max_p_schedule_down(self):
         # ability to provide regulation down through discharging less
-        if not self.duration:
-            return super().max_p_schedule_down()
-        return self.rated_power
+        return super().max_p_schedule_down() if not self.duration else self.rated_power
     
     def decommissioning_report(self, last_year):
         """ Returns the cost of decommissioning a DER and the year the cost will be incurred

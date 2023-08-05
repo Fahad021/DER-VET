@@ -126,57 +126,58 @@ class Battery(BatteryTech.Battery, ESSSizing):
         Returns: the new last year of operation for the BAT after 1 lifetime
 
         """
-        if self.incl_cycle_degrade:
-            # ESTIMATE EXPECTED LIFETIME
-            num_full_lifetimes = len(self.years_system_degraded)
-            if num_full_lifetimes:
-                # get number of years it took to be replaced (get average if replaced more than once)
-                foo = max(self.years_system_degraded) + 1 - self.operation_year.year
-                avg_lifetime = foo / num_full_lifetimes
-                # set FAILURE_YEARS to be the years that the system degraded
-                self.failure_preparation_years = list(self.years_system_degraded)
-            else:
-                # create a data frame with a row for every year in the project lifetime
-                yr_index = pd.period_range(start=start_year, end=end_year, freq='y')
-                self.yearly_degradation_report = pd.Series(index=pd.Index(yr_index))
+        if not self.incl_cycle_degrade:
+            return
+        # ESTIMATE EXPECTED LIFETIME
+        num_full_lifetimes = len(self.years_system_degraded)
+        if num_full_lifetimes:
+            # get number of years it took to be replaced (get average if replaced more than once)
+            foo = max(self.years_system_degraded) + 1 - self.operation_year.year
+            avg_lifetime = foo / num_full_lifetimes
+            # set FAILURE_YEARS to be the years that the system degraded
+            self.failure_preparation_years = list(self.years_system_degraded)
+        else:
+            # create a data frame with a row for every year in the project lifetime
+            yr_index = pd.period_range(start=start_year, end=end_year, freq='y')
+            self.yearly_degradation_report = pd.Series(index=pd.Index(yr_index))
 
-                # determine yearly degradation for the years that we counted cycles for
-                no_years_solved = len(analysis_years)
-                analysis_years = np.sort(analysis_years)  # sort the list of years, smallest to largest
-                no_optimizations_per_year = len(self.degrade_data.iloc[1:].index) / no_years_solved
-                for indx, year in enumerate(analysis_years):
-                    first_degrad_inx = indx * no_optimizations_per_year
-                    initial_degradation = self.degrade_data.iloc[int(first_degrad_inx)]['degradation']
-                    last_degrad_idx = first_degrad_inx + no_optimizations_per_year
-                    final_degradation = self.degrade_data.iloc[int(last_degrad_idx)]['degradation']
-                    tot_yr_degradation = final_degradation - initial_degradation
-                    self.yearly_degradation_report[pd.Period(year, freq='y')] = tot_yr_degradation
-                # fill in the remaining years (assume constant degradation)
-                self.yearly_degradation_report.fillna(method='ffill', inplace=True)
-                # estimate lifetime with average yearly degradation
-                avg_lifetime = (1-self.state_of_health)/self.yearly_degradation_report.mean()
+            # determine yearly degradation for the years that we counted cycles for
+            no_years_solved = len(analysis_years)
+            analysis_years = np.sort(analysis_years)  # sort the list of years, smallest to largest
+            no_optimizations_per_year = len(self.degrade_data.iloc[1:].index) / no_years_solved
+            for indx, year in enumerate(analysis_years):
+                first_degrad_inx = indx * no_optimizations_per_year
+                initial_degradation = self.degrade_data.iloc[int(first_degrad_inx)]['degradation']
+                last_degrad_idx = first_degrad_inx + no_optimizations_per_year
+                final_degradation = self.degrade_data.iloc[int(last_degrad_idx)]['degradation']
+                tot_yr_degradation = final_degradation - initial_degradation
+                self.yearly_degradation_report[pd.Period(year, freq='y')] = tot_yr_degradation
+            # fill in the remaining years (assume constant degradation)
+            self.yearly_degradation_report.fillna(method='ffill', inplace=True)
+            # estimate lifetime with average yearly degradation
+            avg_lifetime = (1-self.state_of_health)/self.yearly_degradation_report.mean()
 
-                # reset failure years
-                self.failure_preparation_years = []
+            # reset failure years
+            self.failure_preparation_years = []
 
-            # set EXPECTED_LIFETIME to be the actual EOL -- it should never be 0 years
-            self.actual_time_to_replacement = max(int(avg_lifetime), 1)
-            # report actual EOL to user
-            TellUser.warning(f"{self.unique_tech_id()} degradation is ON, and so we have estimated the EXPECTED_LIFETIME" +
-                             f" to be {self.actual_time_to_replacement}  (inputted value: {self.expected_lifetime})")
-            if is_ecc and (self.actual_time_to_replacement != self.expected_lifetime):
-                general_msg = "CBA ECC: The USER-GIVEN expected lifetime is not the ACTUAL lifetime of the battery.\nThe ECC calculation costs " \
+        # set EXPECTED_LIFETIME to be the actual EOL -- it should never be 0 years
+        self.actual_time_to_replacement = max(int(avg_lifetime), 1)
+        # report actual EOL to user
+        TellUser.warning(f"{self.unique_tech_id()} degradation is ON, and so we have estimated the EXPECTED_LIFETIME" +
+                         f" to be {self.actual_time_to_replacement}  (inputted value: {self.expected_lifetime})")
+        if is_ecc and (self.actual_time_to_replacement != self.expected_lifetime):
+            general_msg = "CBA ECC: The USER-GIVEN expected lifetime is not the ACTUAL lifetime of the battery.\nThe ECC calculation costs " \
                               "will still be annualized for the USER-GIVEN lifetime, but replacements (if any) will incur with the smallest\n" \
                               "lifetime. Please update your expected lifetime and ecc% to match the ACTUAL lifetime of this DER and rerun for a " \
                               "more accurate Economic Carrying Cost analysis.\n" \
                               f"-- Battery name: {self.name} -- USER-GIVEN (expected lifetime: {self.expected_lifetime}, ecc%: " \
                               f"{self.ecc_perc * 100}) -- ACTUAL (expected lifetime: {self.actual_time_to_replacement}, ecc%: ?) --"
-                TellUser.error(general_msg)
+            TellUser.error(general_msg)
 
-            # set FAILURE_YEARS to be the years that the system degraded to SOH=0
-            failed_on = max(self.years_system_degraded) if num_full_lifetimes else None
-            time_btw_replacement = min(self.actual_time_to_replacement, self.expected_lifetime)
-            self.set_failure_years(end_year, equipment_last_year_operation=failed_on, time_btw_replacement=time_btw_replacement)
+        # set FAILURE_YEARS to be the years that the system degraded to SOH=0
+        failed_on = max(self.years_system_degraded) if num_full_lifetimes else None
+        time_btw_replacement = min(self.actual_time_to_replacement, self.expected_lifetime)
+        self.set_failure_years(end_year, equipment_last_year_operation=failed_on, time_btw_replacement=time_btw_replacement)
 
     def constraints(self, mask, **kwargs):
         """ Builds the master constraint list for the subset of timeseries data being optimized.
@@ -189,8 +190,7 @@ class Battery(BatteryTech.Battery, ESSSizing):
             A list of constraints that corresponds the battery's physical constraints and its service constraints
         """
 
-        constraint_list = super().constraints(mask, **kwargs)  # BatteryTech.Battery->ESSSizing->EnergyStorage
-        return constraint_list
+        return super().constraints(mask, **kwargs)
 
     def drill_down_reports(self, monthly_data=None, time_series_data=None, technology_summary=None, sizing_df=None):
         """Calculates any service related dataframe that is reported to the user.

@@ -115,7 +115,14 @@ class CT(RotatingGeneratorSizing):
                 self.natural_gas_price = ParamsDER.monthly_to_timeseries(freq, monthly_data.loc[:, [f"Natural Gas Price ($/MillionBTU)/{id_str}"]]),
             except KeyError:
                 try:
-                    self.natural_gas_price = ParamsDER.monthly_to_timeseries(freq, monthly_data.loc[:, [f"Natural Gas Price ($/MillionBTU)"]]),
+                    self.natural_gas_price = (
+                        ParamsDER.monthly_to_timeseries(
+                            freq,
+                            monthly_data.loc[
+                                :, ["Natural Gas Price ($/MillionBTU)"]
+                            ],
+                        ),
+                    )
                 except KeyError:
                     pass
 
